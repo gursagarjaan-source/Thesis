@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-labelledby="title desc">
+  <title id="title">KhetLab mark</title>
+  <desc id="desc">Laboratory beaker with wheat seedling for KhetLab.</desc>
+  <defs>
+    <style>
+      .dark { fill: #1A3D2E; }
+      .green { fill: #2D7A45; }
+      .stroke { fill: none; stroke: #1A3D2E; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+  <g transform="translate(24 12)">
+    <path class="stroke" d="M62 56v42L22 170c-8 15 3 32 20 32h102c17 0 28-17 20-32l-40-72V56" />
+    <path class="stroke" d="M54 56h78" />
+    <path class="dark" d="M38 160c14 8 32 12 55 12s41-4 55-12l12 23c3 6-1 13-8 13H34c-7 0-11-7-8-13l12-23Z" />
+    <circle cx="63" cy="181" r="7" fill="#F5F1E8" />
+    <circle cx="85" cy="184" r="5.5" fill="#F5F1E8" />
+    <path class="green" d="M91 150c-17-4-27-15-30-31 16 2 28 12 30 31Z" />
+    <path class="green" d="M96 150c17-4 27-15 30-31-16 2-28 12-30 31Z" />
+    <path class="stroke" d="M94 174V88" />
+    <path class="dark" d="M94 28c13 17 13 31 0 47-13-16-13-30 0-47Z" />
+    <path class="dark" d="M92 80c-19 1-32-8-39-27 19-1 32 8 39 27Z" />
+    <path class="dark" d="M97 80c19 1 32-8 39-27-19-1-32 8-39 27Z" />
+    <path class="dark" d="M92 111c-19 1-32-8-39-27 19-1 32 8 39 27Z" />
+    <path class="dark" d="M97 111c19 1 32-8 39-27-19-1-32 8-39 27Z" />
+    <path class="dark" d="M92 140c-18 1-31-7-38-24 18-1 31 7 38 24Z" />
+    <path class="dark" d="M97 140c18 1 31-7 38-24-18-1-31 7-38 24Z" />
+  </g>
+</svg>

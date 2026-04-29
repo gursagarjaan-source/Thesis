@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KhetLab — Statistical Analysis for Agricultural Research</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F1E8;
+    --bg-2: #EBE5D6;
+    --ink: #0F1410;
+    --ink-2: #2A2F2A;
+    --muted: #6B6F68;
+    --line: #D9D2C0;
+    --green: oklch(0.48 0.09 145);
+    --green-soft: oklch(0.92 0.04 145);
+    --terra: oklch(0.58 0.11 45);
+    --paper: #FBF8F1;
+    --display: 'Inter Tight', -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --serif: 'Source Serif 4', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--display); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { overflow-x: hidden; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="application/json" id="tweaks">
+/*EDITMODE-BEGIN*/{
+  "accent": "green",
+  "density": "comfortable",
+  "showStats": true
+}/*EDITMODE-END*/
+</script>
+
+<script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
