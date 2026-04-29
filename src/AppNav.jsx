@@ -10,7 +10,9 @@ const NAV_CSS = `
   .appnav-root.scrolled{background:rgba(245,241,232,0.97);border-bottom:1px solid #DDD8CB;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
   .appnav-root.top{background:rgba(245,241,232,0.82);border-bottom:1px solid transparent;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
   .brand-logo-link{display:flex;align-items:center;flex:0 0 auto;text-decoration:none;min-width:0}
-  .brand-logo-img{display:block;height:44px;width:auto;max-width:220px;object-fit:contain}
+  .brand-text{font-family:'Inter Tight',sans-serif;font-size:30px;letter-spacing:-0.03em;line-height:1;white-space:nowrap}
+  .brand-text .khet{font-weight:800;color:#1A5C2A}
+  .brand-text .lab{font-weight:400;color:#2A2F2A}
   .appnav-desktop{display:flex}
   .appnav-hamburger{display:none}
   @keyframes appnav-fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
@@ -21,14 +23,14 @@ const NAV_CSS = `
   @media(max-width:860px){
     .appnav-desktop{display:none!important}
     .appnav-hamburger{display:flex!important}
-    .brand-logo-img{height:38px;max-width:176px}
+    .brand-text{font-size:26px}
   }
   @media(max-width:600px){
     .appnav-root .appnav-inner{padding:0 16px!important}
-    .brand-logo-img{height:34px;max-width:148px}
+    .brand-text{font-size:24px}
   }
   @media(max-width:380px){
-    .brand-logo-img{height:32px;max-width:132px}
+    .brand-text{font-size:22px}
   }
 `;
 
@@ -334,7 +336,7 @@ export default function AppNav() {
 
           {/* Logo */}
           <Link to="/" className="brand-logo-link" aria-label="KhetLab home">
-            <img className="brand-logo-img" src="/khetlab-logo-header.svg" alt="KhetLab" width="760" height="220" />
+            <span className="brand-text"><span className="khet">Khet</span><span className="lab">Lab</span></span>
           </Link>
 
           {/* Desktop nav — 4 items */}
