@@ -45,17 +45,17 @@ const FieldCard = ({ field, onClick, selected = false }) => {
         background: active ? 'var(--ink)' : 'var(--paper)',
         color: active ? 'var(--bg)' : 'var(--ink)',
         border: `1px solid ${selected ? 'var(--green)' : 'var(--line)'}`,
-        borderRadius: 16,
-        padding: 28,
+        borderRadius: 14,
+        padding: 20,
         cursor: 'pointer',
         transition: 'all 0.2s',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 160,
+        minHeight: 138,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 16 }}>
-        <span style={{ fontSize: 36 }}>{field.icon}</span>
+        <span style={{ fontSize: 30 }}>{field.icon}</span>
         <span style={{ 
           fontFamily: 'var(--mono)', 
           fontSize: 10, 
@@ -68,11 +68,11 @@ const FieldCard = ({ field, onClick, selected = false }) => {
           {field.cropCount} CROPS
         </span>
       </div>
-      <h3 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em', marginBottom: 8 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 650, letterSpacing: '-0.01em', marginBottom: 8 }}>
         {field.name}
       </h3>
       <p style={{ 
-        fontSize: 13, 
+        fontSize: 12, 
         lineHeight: 1.5, 
         color: active ? 'rgba(245,241,232,0.7)' : 'var(--muted)',
         flex: 1,
@@ -83,7 +83,7 @@ const FieldCard = ({ field, onClick, selected = false }) => {
         display: 'flex', 
         alignItems: 'center', 
         gap: 6, 
-        marginTop: 16,
+        marginTop: 12,
         fontFamily: 'var(--mono)', 
         fontSize: 11, 
         letterSpacing: '0.06em',
@@ -298,7 +298,7 @@ export default function ThesisTopicFinder() {
     try { return JSON.parse(localStorage.getItem('thesis_saved_topics') || '[]'); }
     catch { return []; }
   });
-  const [view, setView] = useState('fields'); // fields | field-detail | saved | search | ai
+  const [view, setView] = useState('ai'); // AI-only page; older browse/search panes are no longer surfaced.
   const [openTopicId, setOpenTopicId] = useState(null);
 
   // AI states
@@ -485,53 +485,19 @@ export default function ThesisTopicFinder() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Hero */}
-      <div className="site-shell page-hero" style={{ padding: '56px 40px 40px', maxWidth: 1400, margin: '0 auto' }}>
+      <div className="site-shell page-hero" style={{ padding: '42px clamp(18px, 4vw, 48px) 24px', maxWidth: 1520, margin: '0 auto' }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: '0.12em', marginBottom: 14 }}>
-          § ACADEMIC · THESIS TOPIC FINDER
+          § ACADEMIC · AI THESIS TOPIC FINDER
         </div>
-        <h1 style={{ fontSize: 'clamp(36px, 4.5vw, 60px)', fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 0.98, marginBottom: 12 }}>
-          Find Your <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400 }}>Thesis Topic.</span>
+        <h1 style={{ fontSize: 'clamp(42px, 5.2vw, 76px)', fontWeight: 750, letterSpacing: '-0.035em', lineHeight: 0.94, marginBottom: 14 }}>
+          Build a thesis topic <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400 }}>fast.</span>
         </h1>
-        <p style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--ink-2)', maxWidth: 600 }}>
-          Discover under-researched topics across 12+ agriculture fields. Each suggestion includes research gap analysis, paper counts, and ready-to-use thesis titles.
+        <p style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink-2)', maxWidth: 760, lineHeight: 1.5 }}>
+          Start with your own field or pick a discipline below. KhetLab then builds full thesis-ready cards with methods, feasibility, cost, observations, and paper searches.
         </p>
       </div>
       
-      {/* Tabs */}
-      <div className="site-shell page-tabs" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 40px 20px', display: 'flex', gap: 0 }}>
-        {[
-          { id: 'fields', label: 'ALL FIELDS' },
-          { id: 'ai', label: '🤖 AI SUGGEST' },
-          { id: 'search', label: 'SEARCH' },
-          { id: 'saved', label: `SAVED (${savedTopics.length})` },
-        ].map(v => (
-          <button
-            key={v.id}
-            onClick={() => {
-              setView(v.id);
-              if (v.id === 'fields') {
-                setSelectedField(null);
-                setSelectedCrop(null);
-              }
-            }}
-            style={{
-              padding: '10px 24px',
-              fontSize: 13,
-              fontFamily: 'var(--mono)',
-              letterSpacing: '0.06em',
-              cursor: 'pointer',
-              background: view === v.id ? 'var(--ink)' : 'var(--paper)',
-              color: view === v.id ? 'var(--bg)' : 'var(--ink)',
-              border: '1px solid var(--line)',
-              borderRadius: v.id === 'fields' ? '999px 0 0 999px' : v.id === 'saved' ? '0 999px 999px 0' : 0,
-            }}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
-      
-      <div className="site-shell page-body" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 40px 80px' }}>
+      <div className="site-shell page-body" style={{ maxWidth: 1520, margin: '0 auto', padding: '0 clamp(18px, 4vw, 48px) 80px' }}>
         
         {/* ═══ FIELDS VIEW ═══ */}
         {view === 'fields' && (
@@ -800,12 +766,19 @@ export default function ThesisTopicFinder() {
         {/* ═══ AI SUGGEST VIEW ═══ */}
         {view === 'ai' && (
           <div>
-            <div style={{ maxWidth: 980, margin: '0 auto' }}>
-              <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>AI Thesis Topic Suggester</h2>
-                <p style={{ fontSize: 15, color: 'var(--muted)' }}>
-                  Choose a field, location, method and perspective. KhetLab returns complete thesis-ready topic cards.
-                </p>
+            <div style={{ maxWidth: 1420, margin: '0 auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, alignItems: 'end', marginBottom: 22, flexWrap: 'wrap' }}>
+                <div>
+                  <h2 style={{ fontSize: 'clamp(28px, 3vw, 42px)', fontWeight: 750, letterSpacing: '-0.025em', marginBottom: 8 }}>AI thesis workspace</h2>
+                  <p style={{ fontSize: 15, color: 'var(--muted)', maxWidth: 680, lineHeight: 1.5 }}>
+                    One focused page: field first, method second, complete topic cards third.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Badge color="green">AI-first</Badge>
+                  <Badge color="blue">Full cards</Badge>
+                  <Badge color="gray">Paper search linked</Badge>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 18, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -817,30 +790,35 @@ export default function ThesisTopicFinder() {
               </div>
 
               {aiStep === 1 && (
-                <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, marginBottom: 32 }}>
-                  <SectionLabel>Select field</SectionLabel>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))', gap: 12 }}>
+                <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 18, padding: 'clamp(18px, 2vw, 28px)', marginBottom: 32, boxShadow: '0 18px 60px rgba(15,20,16,0.05)' }}>
+                  <div className="thesis-quick-entry" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 12, alignItems: 'end', marginBottom: 8 }}>
+                    <div>
+                      <SectionLabel>Quick field entry</SectionLabel>
+                      <input
+                        type="text"
+                        value={customField}
+                        onChange={e => { setCustomField(e.target.value); setAiField(e.target.value.trim() ? 'custom' : ''); setAiMeth(0); }}
+                        placeholder="Type your field: Pomology, Mushroom cultivation, Precision agriculture, Sericulture, Apiculture..."
+                        style={{ width: '100%', padding: '16px 18px', fontSize: 16, borderRadius: 12, border: '1px solid #DDD8CB', background: '#FBF8F1', color: '#0F1410', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <button disabled={!canProceedAi} onClick={() => setAiStep(2)} style={{ minWidth: 190, padding: '16px 22px', background: canProceedAi ? '#1A3D2E' : '#DDD8CB', color: '#F5F1E8', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 650, cursor: canProceedAi ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' }}>
+                      Continue →
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6B6F68', marginBottom: 18 }}>Fast path: type your field above and continue. Or select a field card below to move straight into method selection.</div>
+
+                  <DividerText>or select a field</DividerText>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 12 }}>
                     {allFields.map(field => (
                       <FieldCard
                         key={field.id}
                         field={field}
                         selected={aiField === field.id && !customField}
-                        onClick={(id) => { setAiField(id); setCustomField(''); setAiMeth(0); }}
+                        onClick={(id) => { setAiField(id); setCustomField(''); setAiMeth(0); setAiStep(2); }}
                       />
                     ))}
                   </div>
-                  <DividerText>or type your own field below</DividerText>
-                  <input
-                    type="text"
-                    value={customField}
-                    onChange={e => { setCustomField(e.target.value); setAiField(e.target.value.trim() ? 'custom' : ''); setAiMeth(0); }}
-                    placeholder="e.g. Pomology, Mushroom cultivation, Precision agriculture, Sericulture, Apiculture..."
-                    style={{ width: '100%', padding: '10px 14px', fontSize: 14, borderRadius: 8, border: '0.5px solid #DDD8CB', background: '#FBF8F1', color: '#0F1410', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                  />
-                  <div style={{ fontSize: 11, color: '#6B6F68', marginTop: 6 }}>Type your field if it is not listed above. KhetLab will adapt topics accordingly.</div>
-                  <button disabled={!canProceedAi} onClick={() => setAiStep(2)} style={{ width: '100%', padding: 12, marginTop: 20, background: canProceedAi ? '#1A3D2E' : '#DDD8CB', color: '#F5F1E8', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: canProceedAi ? 'pointer' : 'not-allowed' }}>
-                    Continue to location →
-                  </button>
                 </div>
               )}
 
@@ -958,7 +936,13 @@ export default function ThesisTopicFinder() {
                 </div>
               )}
 
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <style>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @media (max-width: 640px) {
+                  .thesis-quick-entry { grid-template-columns: 1fr !important; }
+                  .thesis-quick-entry button { width: 100% !important; min-width: 0 !important; }
+                }
+              `}</style>
             </div>
           </div>
         )}
