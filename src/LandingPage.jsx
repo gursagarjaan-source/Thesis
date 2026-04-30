@@ -216,7 +216,7 @@ const Methods=()=>{
         <p style={{fontFamily:'var(--serif)',fontSize:16,lineHeight:1.55,color:'#6B6F68'}}>Every analysis is reproducible, documented, and exportable. Choose a family to browse its methods.</p>
       </div>
       <div style={{display:'flex',justifyContent:'center',marginBottom:56}}>
-        <div style={{display:'inline-flex',padding:5,background:'var(--bg)',border:'1px solid var(--line)',borderRadius:999}}>
+        <div className="domain-tabs" style={{display:'inline-flex',padding:5,background:'var(--bg)',border:'1px solid var(--line)',borderRadius:999}}>
           {DOMAINS.map(d=>(<button key={d.id} onClick={()=>setActive(d.id)} style={{padding:'10px 22px',borderRadius:999,border:'none',cursor:'pointer',fontFamily:'var(--display)',fontSize:14,fontWeight:500,background:active===d.id?'#0F1410':'transparent',color:active===d.id?'var(--paper)':'#0F1410',transition:'background 0.2s, color 0.2s'}}>{d.short}</button>))}
         </div>
       </div>

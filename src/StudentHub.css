@@ -1548,7 +1548,7 @@
   outline: none;
   background: transparent;
   font-family: var(--mono, 'IBM Plex Mono', monospace);
-  font-size: 0.82rem;
+  font-size: 1rem;
   color: var(--ink, #2A2F2A);
 }
 
@@ -1783,7 +1783,7 @@
     margin-top: 0.75rem;
   }
 
-  .search-input { font-size: 0.78rem; }
+  .search-input { font-size: 1rem; }
 
   .modal__timeline { padding-left: 1rem; }
   .timeline-label { min-width: 100px; font-size: 0.7rem; }

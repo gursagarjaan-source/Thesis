@@ -53,16 +53,18 @@ const Section = ({ label, children, tableId }) => (
 );
 
 const DataTable = ({ id, head, rows }) => (
-  <table id={id} className="result-table">
-    <thead><tr>{head.map(h => <th key={h}>{h}</th>)}</tr></thead>
-    <tbody>
-      {rows.map((r, i) => (
-        <tr key={i}>{r.map((c, j) => (
-          <td key={j} className={j === r.length - 1 && typeof c === 'string' && (c.includes('*') || c.includes('NS')) ? sigClass(parseFloat(c)) : ''} style={{ fontWeight: j === 0 ? 600 : 400 }}>{c}</td>
-        ))}</tr>
-      ))}
-    </tbody>
-  </table>
+  <div className="responsive-table-wrap">
+    <table id={id} className="result-table">
+      <thead><tr>{head.map(h => <th key={h}>{h}</th>)}</tr></thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i}>{r.map((c, j) => (
+            <td key={j} className={j === r.length - 1 && typeof c === 'string' && (c.includes('*') || c.includes('NS')) ? sigClass(parseFloat(c)) : ''} style={{ fontWeight: j === 0 ? 600 : 400 }}>{c}</td>
+          ))}</tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 );
 
 const MetricGrid = ({ items }) => (

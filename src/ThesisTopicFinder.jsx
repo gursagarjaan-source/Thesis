@@ -480,7 +480,7 @@ export default function ThesisTopicFinder() {
         {/* ═══ FIELDS VIEW ═══ */}
         {view === 'fields' && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 16 }}>
               {allFields.map(field => (
                 <FieldCard
                   key={field.id}
@@ -614,7 +614,7 @@ export default function ThesisTopicFinder() {
               <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: 12 }}>
                 FILTER BY RESEARCH GAP
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {['', 'High', 'Medium', 'Low'].map(level => (
                   <button
                     key={level || 'all'}
@@ -636,7 +636,7 @@ export default function ThesisTopicFinder() {
             </div>
             
             {/* Topics Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
               {filteredTopics.map(topic => (
                 <TopicCard
                   key={topic.id}
@@ -675,7 +675,7 @@ export default function ThesisTopicFinder() {
         {view === 'search' && (
           <div>
             {/* Search Bar */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+            <div className="research-search-row" style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
               <div style={{ flex: 1, position: 'relative' }}>
                 <input
                   type="text"
@@ -702,7 +702,7 @@ export default function ThesisTopicFinder() {
             
             {/* Search Results */}
             {searchQuery && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
                 {searchTopics(searchQuery).map(topic => (
                   <TopicCard
                     key={topic.id}
@@ -760,7 +760,7 @@ export default function ThesisTopicFinder() {
                     style={{
                       width: '100%',
                       padding: '14px 16px',
-                      fontSize: 15,
+                      fontSize: 16,
                       background: 'var(--bg)',
                       border: '1px solid var(--line)',
                       borderRadius: 10,
@@ -781,7 +781,7 @@ export default function ThesisTopicFinder() {
                   <label style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 10 }}>
                     STUDY LEVEL
                   </label>
-                  <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     {['BSc', 'MSc', 'PhD'].map(lvl => (
                       <button
                         key={lvl}
@@ -790,7 +790,7 @@ export default function ThesisTopicFinder() {
                           flex: 1,
                           padding: '12px',
                           borderRadius: 10,
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: 600,
                           cursor: 'pointer',
                           background: aiLevel === lvl ? 'var(--ink)' : 'var(--bg)',
@@ -817,7 +817,7 @@ export default function ThesisTopicFinder() {
                     style={{
                       width: '100%',
                       padding: '14px 16px',
-                      fontSize: 15,
+                      fontSize: 16,
                       background: 'var(--bg)',
                       border: '1px solid var(--line)',
                       borderRadius: 10,
@@ -907,7 +907,7 @@ export default function ThesisTopicFinder() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
                     {aiResults.map((topic, i) => (
                       <div key={topic.id}>
                         <div style={{
@@ -948,7 +948,7 @@ export default function ThesisTopicFinder() {
             </h2>
             
             {savedTopicsData.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
                 {savedTopicsData.map(topic => (
                   <TopicCard
                     key={topic.id}

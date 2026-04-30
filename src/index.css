@@ -12,9 +12,17 @@
   --display: 'Inter Tight', -apple-system, sans-serif;
   --mono: 'IBM Plex Mono', monospace;
   --serif: 'Source Serif 4', Georgia, serif;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 17px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 30px;
+  --text-3xl: 36px;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -25,11 +33,55 @@ html, body {
   color: var(--ink);
   font-family: var(--display);
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 body {
   overflow-x: hidden;
+}
+
+img,
+video,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+a,
+[role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+  font-size: 16px;
+}
+
+.site-shell {
+  width: 100%;
+}
+
+.responsive-grid,
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+}
+
+.responsive-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table-wrap table {
+  min-width: 520px;
 }
 
 #root {
@@ -126,7 +178,7 @@ body {
   border: 1.5px solid var(--line);
   border-radius: 8px;
   font-family: var(--display);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--ink);
   outline: none;
   transition: border-color 0.2s;
@@ -160,6 +212,15 @@ body {
   gap: 6px;
   font-family: var(--display);
   transition: opacity 0.2s;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --text-lg: 18px;
+    --text-xl: 21px;
+    --text-2xl: 26px;
+    --text-3xl: 28px;
+  }
 }
 
 .op-btn:hover {
@@ -562,6 +623,25 @@ body {
   .home-tool-tabs button {
     min-width: 160px !important;
     padding: 14px 18px !important;
+  }
+
+  .domain-tabs {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    justify-content: flex-start !important;
+    border-radius: 12px !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .domain-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .domain-tabs button {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
   }
 
   /* ── CTA ── */

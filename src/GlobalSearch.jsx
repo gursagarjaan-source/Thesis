@@ -58,7 +58,7 @@ const CSS = `
   .gs-bar.focused{border-color:#2D7A45;box-shadow:0 0 0 3px rgba(45,122,69,0.12)}
   .gs-icon{flex-shrink:0;color:#6B6F68;display:grid;place-items:center;transition:color 0.2s}
   .gs-bar.focused .gs-icon{color:#2D7A45}
-  .gs-input{flex:1;border:none;background:transparent;font-size:13px;font-family:'Inter Tight',sans-serif;color:#0F1410;outline:none;min-width:0;padding:0}
+  .gs-input{flex:1;border:none;background:transparent;font-size:16px;font-family:'Inter Tight',sans-serif;color:#0F1410;outline:none;min-width:0;padding:0}
   .gs-input::placeholder{color:#A0A09A}
   .gs-clear{background:none;border:none;cursor:pointer;color:#6B6F68;font-size:16px;padding:0;line-height:1;display:grid;place-items:center;flex-shrink:0}
   .gs-clear:hover{color:#0F1410}
@@ -82,8 +82,8 @@ const CSS = `
     .gs-dropdown{width:calc(100vw - 32px);right:-60px}
   }
   @media(max-width:500px){
-    .gs-bar.expanded{width:180px}
-    .gs-dropdown{right:-100px}
+    .gs-bar.expanded{width:min(180px,calc(100vw - 92px))}
+    .gs-dropdown{right:-58px;max-width:calc(100vw - 20px)}
     .gs-hint{display:none}
   }
 `;

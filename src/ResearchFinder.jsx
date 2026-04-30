@@ -388,11 +388,11 @@ export default function ResearchFinder() {
               <div className="research-filters" style={{ display: 'flex', gap: 12, marginBottom: 20, padding: 16, background: 'var(--paper)', borderRadius: 10, border: '1px solid var(--line)' }}>
                 <div>
                   <label style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--muted)', display: 'block', marginBottom: 6 }}>YEAR</label>
-                  <input value={yearFilter} onChange={e => setYearFilter(e.target.value)} placeholder="e.g. 2020-2024" style={{ padding: '10px 14px', fontSize: 13, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, width: 140 }} />
+                  <input value={yearFilter} onChange={e => setYearFilter(e.target.value)} placeholder="e.g. 2020-2024" style={{ padding: '11px 14px', fontSize: 16, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, width: 140 }} />
                 </div>
                 <div>
                   <label style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--muted)', display: 'block', marginBottom: 6 }}>FIELD</label>
-                  <select value={fieldFilter} onChange={e => setFieldFilter(e.target.value)} style={{ padding: '10px 14px', fontSize: 13, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, minWidth: 200 }}>
+                  <select value={fieldFilter} onChange={e => setFieldFilter(e.target.value)} style={{ padding: '11px 14px', fontSize: 16, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, minWidth: 200 }}>
                     {FIELDS.map(f => <option key={f} value={f}>{f || 'All fields'}</option>)}
                   </select>
                 </div>
