@@ -1,27 +1,35 @@
 // Unified Stats Engine - loads all Python functions into Pyodide
+import { getPyodide } from './pyodideLoader';
 import { doePython, runTwoFactor, runLatinSquare, runStripPlot, runLayout, runThreeFactor } from './engineDOE';
 import { descPython, runFrequency, runCrosstab, runComparingMeans, runCorrelation, runRegression, runPCA, runKMeans, runProbit } from './engineDesc';
 import { biomPython, runPathAnalysis, runDiallel, runStability, runLineTester, runAugmented, runGenMeans, runPooledRBD, runMulComp } from './engineBiom';
 
-let pyodideInstance = null;
+let engineInstance = null;
 let isReady = false;
+let enginePromise = null;
 
-export const initEngine = async () => {
-  if (pyodideInstance && isReady) return pyodideInstance;
-  try {
-    console.log("Loading Pyodide...");
-    pyodideInstance = await window.loadPyodide();
-    console.log("Pyodide loaded. Loading scipy...");
-    await pyodideInstance.loadPackage("scipy");
-    console.log("Scipy loaded. Registering functions...");
-    pyodideInstance.runPython(oneFactorPython);
-    pyodideInstance.runPython(doePython);
-    pyodideInstance.runPython(descPython);
-    pyodideInstance.runPython(biomPython);
+export const initEngine = async (options = {}) => {
+  if (engineInstance && isReady) return engineInstance;
+  if (enginePromise) return enginePromise;
+
+  enginePromise = (async () => {
+    const pyodide = await getPyodide(options);
+    options.onStage?.('registering-functions');
+    pyodide.runPython(oneFactorPython);
+    pyodide.runPython(doePython);
+    pyodide.runPython(descPython);
+    pyodide.runPython(biomPython);
+    engineInstance = pyodide;
     isReady = true;
-    console.log("All engines ready.");
-    return pyodideInstance;
+    options.onStage?.('ready');
+    return engineInstance;
+  })();
+
+  try {
+    return await enginePromise;
   } catch (err) {
+    enginePromise = null;
+    isReady = false;
     console.error("Pyodide init failed:", err);
     throw err;
   }
@@ -74,9 +82,8 @@ def run_one_factor(data_str, treatments, replications, design):
         MSE = ESS / df_E
         F_Tr = MSTr / MSE
         p_Tr = 1.0 - stats.f.cdf(F_Tr, df_Tr, df_E)
-        MSR = None
-        F_R = None
-        p_R = None
+        F_R = MSR / MSE
+        p_R = 1.0 - stats.f.cdf(F_R, df_R, df_E)
         anova = [
             {"source": "Replication", "df": df_R, "ss": RSS, "ms": MSR, "f": F_R, "p": p_R},
             {"source": "Treatment", "df": df_Tr, "ss": TrSS, "ms": MSTr, "f": F_Tr, "p": p_Tr},
@@ -112,8 +119,8 @@ def run_one_factor(data_str, treatments, replications, design):
 `;
 
 // ═══ Unified analysis dispatcher ═══
-export const analyzeOneFactor = async (dataStr, treatments, replications, design) => {
-  const pyodide = await initEngine();
+export const analyzeOneFactor = async (dataStr, treatments, replications, design, options) => {
+  const pyodide = await initEngine(options);
   const runAnova = pyodide.globals.get('run_one_factor');
   try {
     const rawJson = runAnova(dataStr, parseInt(treatments, 10), parseInt(replications, 10), design);
@@ -126,12 +133,12 @@ export const analyzeOneFactor = async (dataStr, treatments, replications, design
 };
 
 // Dispatch map: toolId → analysis function
-export const runAnalysis = async (toolId, data, opts) => {
-  const py = await initEngine();
+export const runAnalysis = async (toolId, data, opts, options = {}) => {
+  const py = await initEngine(options);
 
   switch (toolId) {
     case 'onefactor':
-      return analyzeOneFactor(data, opts.treatments, opts.replications, opts.design || 'RBD');
+      return analyzeOneFactor(data, opts.treatments, opts.replications, opts.design || 'RBD', options);
     case 'twofactor':
       return runTwoFactor(py, data, opts.f1, opts.f2, opts.replications);
     case 'threefactor':

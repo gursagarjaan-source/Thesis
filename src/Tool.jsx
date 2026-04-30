@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { initEngine, runAnalysis } from './statsEngine';
+import { interpretResults } from './aiFeatures/resultsInterpreter';
 import { AnovaResult, FrequencyResult, CorrelationResult, RegressionResult, MeansResult, CrosstabResult, PCAResult, ClusterResult, ProbitResult, LayoutResult, PathResult, MulCompResult, StabilityResult, getRenderer } from './ResultRenderers';
 
 const TOOLS = {
@@ -125,6 +126,78 @@ const RenderResult = ({ toolId, result }) => {
   }
 };
 
+const LOAD_MESSAGES = {
+  'loading-script': ['LOADING STATS ENGINE', 'Preparing Pyodide in the browser...'],
+  'loading-runtime': ['LOADING STATS ENGINE', 'Starting the Python runtime...'],
+  'loading-packages': ['LOADING NUMPY + SCIPY', 'Loading statistical packages...'],
+  'registering-functions': ['REGISTERING METHODS', 'Preparing KhetLab analysis functions...'],
+  ready: ['READY', 'Running computation...'],
+};
+
+const PyodideLoadingState = ({ stage }) => {
+  const [label, message] = LOAD_MESSAGES[stage] || LOAD_MESSAGES['loading-runtime'];
+  return (
+    <div style={{ margin: 'auto', textAlign: 'center' }}>
+      <div className="loading-spinner" style={{ margin: '0 auto 16px' }} />
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: '0.12em' }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 500, marginTop: 8 }}>{message}</div>
+    </div>
+  );
+};
+
+const ComputationError = ({ message, onRetry }) => (
+  <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--terra)', padding: 32, background: 'rgba(180,80,40,0.06)', borderRadius: 10, maxWidth: 520 }}>
+    <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 16 }}>Computation Error</div>
+    <div style={{ fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.6 }}>{message}</div>
+    <button onClick={onRetry} style={{ marginTop: 16, padding: '8px 16px', background: 'var(--ink)', color: 'var(--bg)', border: 'none', borderRadius: 999, fontSize: 12, cursor: 'pointer' }}>Try Again</button>
+  </div>
+);
+
+const ResultsInterpreter = ({ result, tool, opts }) => {
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState('idle');
+
+  const runInterpretation = async () => {
+    setStatus('loading');
+    try {
+      const interpretation = await interpretResults({ result, toolTitle: tool.title, opts });
+      setText(interpretation);
+      setStatus('ready');
+    } catch (error) {
+      console.error(error);
+      setText('KhetLab could not prepare an interpretation for this result.');
+      setStatus('error');
+    }
+  };
+
+  const copyText = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus('copied');
+      window.setTimeout(() => setStatus('ready'), 1200);
+    } catch {
+      setStatus('ready');
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 18, padding: 16, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg-2)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: text ? 12 : 0 }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', letterSpacing: '0.1em' }}>AI RESULT INTERPRETER</div>
+        <button
+          onClick={text ? copyText : runInterpretation}
+          disabled={status === 'loading'}
+          style={{ padding: '8px 13px', background: 'var(--ink)', color: 'var(--bg)', border: 'none', borderRadius: 999, fontSize: 12, cursor: status === 'loading' ? 'wait' : 'pointer', opacity: status === 'loading' ? 0.65 : 1 }}
+        >
+          {status === 'loading' ? 'Writing...' : text ? (status === 'copied' ? 'Copied' : 'Copy') : 'Interpret'}
+        </button>
+      </div>
+      {text && <p style={{ fontFamily: 'var(--serif)', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.6 }}>{text}</p>}
+    </div>
+  );
+};
+
 // ═══ DATA PLACEHOLDERS ═══
 const PLACEHOLDERS = {
   onefactor: "Paste treatment × replication data.\nEach row = one treatment, values separated by spaces or tabs.\n\nExample (3 treatments × 4 reps):\n123 123 131 133\n142 149 147 134\n147 172 143 139",
@@ -146,14 +219,18 @@ const Workspace = ({ toolId, tool }) => {
   const [step, setStep] = useState('input');
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [loadStage, setLoadStage] = useState('loading-script');
 
-  useEffect(() => { initEngine().catch(e => console.error("Prefetch Error", e)); }, []);
+  useEffect(() => {
+    initEngine({ onStage: setLoadStage }).catch(e => console.error("Prefetch Error", e));
+  }, []);
 
   const handleRun = async () => {
     setStep('running');
     setErrorMessage('');
+    setLoadStage('loading-runtime');
     try {
-      const res = await runAnalysis(toolId, data, opts);
+      const res = await runAnalysis(toolId, data, opts, { onStage: setLoadStage });
       setResult(res);
       setStep('result');
     } catch (err) {
@@ -253,20 +330,17 @@ const Workspace = ({ toolId, tool }) => {
               </div>
             )}
             {step === 'running' && (
-              <div style={{ margin: 'auto', textAlign: 'center' }}>
-                <div className="loading-spinner" style={{ margin: '0 auto 16px' }} />
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: '0.12em' }}>INITIALIZING PYODIDE ENGINE</div>
-                <div style={{ fontSize: 18, fontWeight: 500, marginTop: 8 }}>Running computation...</div>
-              </div>
+              <PyodideLoadingState stage={loadStage} />
             )}
             {step === 'error' && (
-              <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--terra)', padding: 32, background: 'rgba(180,80,40,0.06)', borderRadius: 10, maxWidth: 500 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 16 }}>Computation Error</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.6 }}>{errorMessage}</div>
-                <button onClick={reset} style={{ marginTop: 16, padding: '8px 16px', background: 'var(--ink)', color: 'var(--bg)', border: 'none', borderRadius: 999, fontSize: 12, cursor: 'pointer' }}>Try Again</button>
-              </div>
+              <ComputationError message={errorMessage} onRetry={reset} />
             )}
-            {step === 'result' && result && <RenderResult toolId={toolId} result={result} />}
+            {step === 'result' && result && (
+              <>
+                <RenderResult toolId={toolId} result={result} />
+                <ResultsInterpreter result={result} tool={tool} opts={opts} />
+              </>
+            )}
           </div>
         </div>
       </div>
