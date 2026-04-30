@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   THESIS_FIELDS, 
   getTopicsByField, 
@@ -7,7 +7,7 @@ import {
   filterTopics, 
   searchTopics 
 } from './thesisTopicData';
-import { generateThesisTopics } from './geminiService';
+import { generateV3ThesisTopics } from './aiFeatures/thesisTopicGenerator';
 
 const Ic = ({ d, size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -31,8 +31,9 @@ const ICONS = {
 // ═══ HEADER ═══
 
 // ═══ FIELD CARD ═══
-const FieldCard = ({ field, onClick }) => {
+const FieldCard = ({ field, onClick, selected = false }) => {
   const [hover, setHover] = useState(false);
+  const active = selected || hover;
   
   return (
     <div
@@ -41,9 +42,9 @@ const FieldCard = ({ field, onClick }) => {
       onMouseLeave={() => setHover(false)}
       style={{
         textDecoration: 'none',
-        background: hover ? 'var(--ink)' : 'var(--paper)',
-        color: hover ? 'var(--bg)' : 'var(--ink)',
-        border: '1px solid var(--line)',
+        background: active ? 'var(--ink)' : 'var(--paper)',
+        color: active ? 'var(--bg)' : 'var(--ink)',
+        border: `1px solid ${selected ? 'var(--green)' : 'var(--line)'}`,
         borderRadius: 16,
         padding: 28,
         cursor: 'pointer',
@@ -60,9 +61,9 @@ const FieldCard = ({ field, onClick }) => {
           fontSize: 10, 
           padding: '4px 10px', 
           borderRadius: 999, 
-          background: hover ? 'rgba(255,255,255,0.15)' : `${field.color}15`,
-          color: hover ? 'var(--bg)' : field.color,
-          border: `1px solid ${hover ? 'rgba(255,255,255,0.2)' : field.color + '30'}`,
+          background: active ? 'rgba(255,255,255,0.15)' : `${field.color}15`,
+          color: active ? 'var(--bg)' : field.color,
+          border: `1px solid ${active ? 'rgba(255,255,255,0.2)' : field.color + '30'}`,
         }}>
           {field.cropCount} CROPS
         </span>
@@ -73,7 +74,7 @@ const FieldCard = ({ field, onClick }) => {
       <p style={{ 
         fontSize: 13, 
         lineHeight: 1.5, 
-        color: hover ? 'rgba(245,241,232,0.7)' : 'var(--muted)',
+        color: active ? 'rgba(245,241,232,0.7)' : 'var(--muted)',
         flex: 1,
       }}>
         {field.description}
@@ -86,7 +87,7 @@ const FieldCard = ({ field, onClick }) => {
         fontFamily: 'var(--mono)', 
         fontSize: 11, 
         letterSpacing: '0.06em',
-        opacity: hover ? 1 : 0.6,
+        opacity: active ? 1 : 0.6,
         transition: 'opacity 0.2s',
       }}>
         EXPLORE <Ic d={ICONS.arrow} size={13}/>
@@ -95,188 +96,200 @@ const FieldCard = ({ field, onClick }) => {
   );
 };
 
+const METHS = {
+  hort: ['Foliar application', 'Soil application', 'Fertigation (drip)', 'Post-harvest treatment', 'Variety evaluation', 'Pruning / training', 'Rooting / propagation', 'Protected cultivation'],
+  veg: ['Foliar application', 'Spacing / density', 'Fertigation', 'Weed management', 'Variety evaluation', 'Protected cultivation', 'Growth regulators', 'Seed priming'],
+  flori: ['Growth regulators', 'Foliar nutrition', 'Variety evaluation', 'Postharvest storage', 'Propagation', 'Spacing / density', 'Chemical pinching'],
+  ento: ['Biocontrol agents', 'Insecticide evaluation', 'Pheromone traps', 'Population dynamics', 'ETL studies', 'Integrated pest management', 'Repellents'],
+  path: ['Fungicide evaluation', 'Biocontrol (Trichoderma/Bacillus)', 'Resistance screening', 'Epidemiology', 'Survey & identification', 'Hot water treatment', 'Bactericide'],
+  agron: ['Variety evaluation', 'Fertilizer management', 'Weed management', 'Irrigation scheduling', 'Intercropping', 'Crop residue management', 'Organic inputs', 'Seed rate optimization'],
+  breed: ['Genotype evaluation', 'Crossing / hybridization', 'Stability analysis', 'Molecular markers', 'Selection indices', 'Character association', 'Path analysis'],
+  soil: ['Nutrient management', 'Biofertilizers', 'Soil amendments', 'Soil organic carbon', 'Microbial activity', 'Heavy metal remediation', 'Composting', 'Biochar'],
+  eng: ['Irrigation systems', 'Farm machinery evaluation', 'Solar energy in agriculture', 'Residue management', 'Storage structures', 'Precision farming', 'Sensor technology'],
+  food: ['Processing / value addition', 'Packaging studies', 'Quality analysis', 'Bioactive compounds', 'Fermentation', 'Drying / dehydration', 'Sensory evaluation'],
+  eco: ['Cost-benefit analysis', 'Market survey', 'Supply chain analysis', 'Policy impact', 'Farmer adoption study', 'Value chain mapping'],
+  organic: ['Vermicompost', 'Biofertilizers', 'Cover cropping', 'Mulching', 'Compost evaluation', 'Botanical pesticides', 'Farm waste recycling'],
+  custom: ['Foliar application', 'Soil application', 'Variety evaluation', 'Field experiment', 'Lab analysis', 'Survey study', 'Pot culture', 'Controlled environment'],
+};
+
+const STATES = ['Punjab', 'Haryana', 'Uttar Pradesh', 'Rajasthan', 'Maharashtra'];
+
 // ═══ TOPIC CARD ═══
-const TopicCard = ({ topic, isSaved, onToggleSave }) => {
-  const [hover, setHover] = useState(false);
-  const [showTitles, setShowTitles] = useState(false);
-  
-  const gapColors = {
-    High: { bg: '#fee2e2', text: '#dc2626', border: '#fecaca' },
-    Medium: { bg: '#fef3c7', text: '#d97706', border: '#fde68a' },
-    Low: { bg: '#d1fae5', text: '#059669', border: '#a7f3d0' },
+const Badge = ({ color = 'gray', children }) => {
+  const colors = {
+    gray: ['#EEE9DF', '#6B6F68'],
+    green: ['#EAF3DE', '#1A3D2E'],
+    amber: ['#FEF3C7', '#92400E'],
+    blue: ['#E8F0FE', '#2D5A8E'],
   };
-  
-  const gapStyle = gapColors[topic.researchGap];
-  
+  const [bg, text] = colors[color] || colors.gray;
+  return <span style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '3px 8px', borderRadius: 999, background: bg, color: text, fontWeight: 500 }}>{children}</span>;
+};
+
+const normalizeTopic = (topic, index = 0) => {
+  const gap = String(topic.gap || topic.researchGap || 'medium').toLowerCase();
+  const difficulty = topic.difficulty || (gap.includes('high') ? 'Medium' : 'Low');
+  return {
+    ...topic,
+    rank: topic.rank || index + 1,
+    title: topic.title,
+    oneliner: topic.oneliner || topic.description || topic.whyValuable || 'A practical thesis experiment with measurable field outcomes.',
+    gap: gap.includes('high') ? 'high' : gap.includes('low') ? 'low' : 'medium',
+    gapReason: topic.gapReason || topic.researchGap || topic.whyValuable || 'This topic has regional importance and needs clearer local evidence.',
+    gapNote: topic.gapNote || `${topic.paperCount || topic.papers || 25} papers estimated for this topic area.`,
+    treats: topic.treats || [
+      { t: 'T1: Recommended practice or treatment', ctrl: false },
+      { t: 'T2: Improved or alternative treatment', ctrl: false },
+      { t: 'T0: Control (standard farmer practice)', ctrl: true },
+    ],
+    design: topic.design || 'RBD',
+    reps: topic.reps || 3,
+    plotSize: topic.plotSize || 'One uniform plot per replication',
+    obs: topic.obs || ['Growth parameters', 'Yield', 'Quality parameters', 'Economics'],
+    duration: topic.duration || topic.yearRange || 'One crop season',
+    cost: topic.cost || 'Rs 10000-18000',
+    costBreak: topic.costBreak || 'Field inputs, labour, sampling and basic analysis',
+    novelty: topic.novelty || topic.noveltyScore || 7,
+    difficulty,
+    diffReason: topic.diffReason || topic.methodology || 'Uses standard university field and lab facilities.',
+    vars: topic.vars || [topic.cropName || 'Recommended cultivar'],
+    funding: topic.funding || 'Self-funded / departmental support',
+    profNote: topic.profNote || 'Keep the treatment count realistic and justify each observation clearly.',
+    papers: topic.papers || topic.paperCount || 25,
+    query: topic.query || topic.title,
+  };
+};
+
+const TopicCard = ({ topic, isSaved, onToggleSave, onFindPapers, isOpen, onToggle }) => {
+  const t = normalizeTopic(topic, topic.rank ? topic.rank - 1 : 0);
+  const open = isOpen ?? false;
+  const toggle = onToggle || (() => {});
+
   return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        background: 'var(--paper)',
-        border: '1px solid var(--line)',
-        borderRadius: 14,
-        padding: '24px 28px',
-        transition: 'box-shadow 0.2s',
-        boxShadow: hover ? '0 4px 20px rgba(0,0,0,0.06)' : 'none',
-      }}
-    >
-      {/* Tags */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <span style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 10,
-          letterSpacing: '0.08em',
-          background: gapStyle.bg,
-          color: gapStyle.text,
-          padding: '4px 10px',
-          borderRadius: 999,
-          border: `1px solid ${gapStyle.border}`,
-          fontWeight: 600,
-        }}>
-          {topic.researchGap.toUpperCase()} GAP
-        </span>
-        <span style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 10,
-          background: 'var(--bg-2)',
-          padding: '3px 8px',
-          borderRadius: 4,
-          color: 'var(--muted)',
-        }}>
-          📄 {topic.paperCount} papers
-        </span>
-        <span style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 10,
-          background: 'var(--bg-2)',
-          padding: '3px 8px',
-          borderRadius: 4,
-          color: 'var(--muted)',
-        }}>
-          📅 {topic.yearRange}
-        </span>
+    <div style={{ background: '#FBF8F1', border: '0.5px solid', borderColor: open ? '#2D7A45' : '#DDD8CB', borderRadius: 12, overflow: 'hidden', marginBottom: 10, transition: 'border-color .15s' }}>
+      <div style={{ display: 'flex', cursor: 'pointer' }} onClick={toggle}>
+        <div style={{ width: 4, flexShrink: 0, background: t.gap === 'high' ? '#2D7A45' : '#D4A574' }} />
+        <div style={{ padding: '14px 16px', flex: 1 }}>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 7 }}>
+            <Badge color="gray">#{t.rank}</Badge>
+            <Badge color={t.gap === 'high' ? 'green' : 'amber'}>{t.gap === 'high' ? 'High research gap' : t.gap === 'low' ? 'Low research gap' : 'Medium research gap'}</Badge>
+            <Badge color="blue">~{t.papers} papers</Badge>
+            <Badge color="gray">{t.difficulty} effort</Badge>
+            <Badge color="gray">{t.duration}</Badge>
+            <Badge color="gray">{t.cost}</Badge>
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.45, marginBottom: 5 }}>{t.title}</div>
+          <div style={{ fontSize: 12, color: '#6B6F68', lineHeight: 1.5 }}>{t.oneliner}</div>
+        </div>
+        <div style={{ padding: '14px 14px 0 0', color: '#6B6F68', fontSize: 18 }}>{open ? '⌄' : '›'}</div>
       </div>
-      
-      {/* Title */}
-      <h3 style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35, marginBottom: 8, letterSpacing: '-0.01em' }}>
-        {topic.title}
-      </h3>
-      
-      {/* Description */}
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5, marginBottom: 12 }}>
-        {topic.description}
-      </p>
-      
-      {/* Why Valuable */}
-      <div style={{
-        fontSize: 12,
-        color: 'var(--green)',
-        background: 'var(--green-soft)',
-        padding: '10px 14px',
-        borderRadius: 8,
-        lineHeight: 1.5,
-        marginBottom: 16,
-      }}>
-        <strong>💡 Why this matters:</strong> {topic.whyValuable}
-      </div>
-      
-      {/* Suggested Titles Toggle */}
-      <button
-        onClick={() => setShowTitles(!showTitles)}
-        style={{
-          width: '100%',
-          padding: '10px 14px',
-          background: 'var(--bg)',
-          border: '1px solid var(--line)',
-          borderRadius: 8,
-          fontSize: 12,
-          fontFamily: 'var(--mono)',
-          cursor: 'pointer',
-          textAlign: 'left',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-        }}
-      >
-        <span>🎓 Suggested Thesis Titles ({topic.suggestedTitles.length})</span>
-        <span>{showTitles ? '▲' : '▼'}</span>
-      </button>
-      
-      {showTitles && (
-        <div style={{
-          background: 'var(--bg)',
-          border: '1px solid var(--line)',
-          borderRadius: 8,
-          padding: 16,
-          marginBottom: 16,
-        }}>
-          {topic.suggestedTitles.map((title, i) => (
-            <div
-              key={i}
-              style={{
-                fontSize: 13,
-                lineHeight: 1.5,
-                marginBottom: i < topic.suggestedTitles.length - 1 ? 10 : 0,
-                paddingBottom: i < topic.suggestedTitles.length - 1 ? 10 : 0,
-                borderBottom: i < topic.suggestedTitles.length - 1 ? '1px solid var(--line)' : 'none',
-              }}
-            >
-              {i + 1}. {title}
+
+      {open && (
+        <div style={{ padding: 16, borderTop: '0.5px solid #DDD8CB' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: '#6B6F68', width: 52, flexShrink: 0 }}>Novelty</div>
+            <div style={{ flex: 1, height: 4, background: '#EEE9DF', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(10, Number(t.novelty) || 7) * 10}%`, height: '100%', background: '#2D7A45', borderRadius: 2 }} />
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: '#2D7A45', width: 30, textAlign: 'right' }}>{t.novelty}/10</div>
+          </div>
+
+          <div style={{ background: '#EAF3DE', borderRadius: 6, padding: '9px 12px', fontSize: 12, color: '#1A3D2E', lineHeight: 1.6, marginBottom: 14 }}>
+            <strong>Research gap:</strong> {t.gapReason}
+          </div>
+
+          <SectionLabel>Treatments</SectionLabel>
+          {t.treats.map((tr, i) => (
+            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'baseline', padding: '5px 8px', borderRadius: 6, marginBottom: 3, fontSize: 12, background: tr.ctrl ? '#FEF3C7' : '#F5F1E8', color: tr.ctrl ? '#92400E' : '#0F1410' }}>
+              {tr.ctrl && <span style={{ fontSize: 10, fontWeight: 500 }}>CTRL</span>}
+              {tr.t}
             </div>
           ))}
+
+          <div className="topic-info-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, margin: '14px 0' }}>
+            {[
+              ['Design', `${t.design} · ${t.reps} reps`],
+              ['Plot size', t.plotSize],
+              ['Duration', t.duration],
+              ['Est. cost', t.cost],
+              ['Funding', t.funding],
+              ['Difficulty', t.difficulty],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <div style={{ fontSize: 11, color: '#6B6F68', marginBottom: 2 }}>{label}</div>
+                <div style={{ fontSize: 12, fontWeight: 500 }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <SectionLabel>Key observations to record</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 14 }}>
+            {t.obs.map((o, i) => <div key={i} style={{ fontSize: 12, padding: '4px 8px', background: '#F5F1E8', borderRadius: 5 }}>{o}</div>)}
+          </div>
+
+          <SectionLabel>Feasibility checklist</SectionLabel>
+          {[
+            { text: 'Equipment available at standard agriculture university', status: 'good' },
+            { text: `Completable in ${t.duration} - within thesis timeline`, status: 'good' },
+            { text: `Cost: ${t.costBreak}`, status: t.difficulty === 'Low' ? 'good' : t.difficulty === 'Medium' ? 'warn' : 'bad' },
+            { text: `Varieties available: ${t.vars.join(', ')}`, status: 'good' },
+          ].map((item, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, padding: '5px 8px', borderRadius: 6, marginBottom: 4, background: item.status === 'good' ? '#EAF3DE' : item.status === 'warn' ? '#FEF3C7' : '#FEE2E2', color: item.status === 'good' ? '#1A3D2E' : item.status === 'warn' ? '#92400E' : '#991B1B' }}>
+              <span style={{ fontSize: 11, flexShrink: 0, marginTop: 1 }}>{item.status === 'good' ? '✓' : item.status === 'warn' ? '!' : '×'}</span>
+              {item.text}
+            </div>
+          ))}
+
+          <div style={{ background: '#FEF3C7', borderRadius: 6, padding: '9px 12px', fontSize: 12, color: '#92400E', lineHeight: 1.6, margin: '14px 0 12px' }}>
+            Professor's note: "{t.profNote}"
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px', background: '#EAF3DE', borderRadius: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: '#1A3D2E' }}>~{t.papers} papers · {t.gapNote}</div>
+            <button onClick={() => onFindPapers(t.query, t.title)} style={{ fontSize: 11, color: '#1A3D2E', cursor: 'pointer', fontWeight: 500, border: 'none', background: 'transparent' }}>Find papers in KhetLab →</button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => onFindPapers(t.query, t.title)} style={{ padding: '8px 16px', borderRadius: 8, background: '#1A3D2E', color: '#F5F1E8', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Find papers</button>
+            <button onClick={onToggleSave} style={{ padding: '8px 14px', borderRadius: 8, background: isSaved ? '#0F1410' : 'transparent', color: isSaved ? '#F5F1E8' : '#0F1410', border: '0.5px solid #DDD8CB', fontSize: 12, cursor: 'pointer' }}>{isSaved ? 'Saved' : 'Save topic'}</button>
+            <button style={{ padding: '8px 14px', borderRadius: 8, background: 'transparent', border: '0.5px solid #DDD8CB', fontSize: 12, cursor: 'pointer' }}>Start synopsis →</button>
+            <button onClick={() => navigator.clipboard?.writeText(t.title)} style={{ padding: '8px 14px', borderRadius: 8, background: 'transparent', border: '0.5px solid #DDD8CB', fontSize: 12, cursor: 'pointer' }}>Share</button>
+          </div>
         </div>
       )}
-      
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button
-          onClick={onToggleSave}
-          style={{
-            padding: '8px 14px',
-            borderRadius: 999,
-            fontSize: 11,
-            fontFamily: 'var(--mono)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            background: isSaved ? 'var(--ink)' : 'var(--paper)',
-            color: isSaved ? 'var(--bg)' : 'var(--ink)',
-            border: isSaved ? '1px solid var(--ink)' : '1px solid var(--line)',
-          }}
-        >
-          <Ic d={isSaved ? ICONS.trash : ICONS.heart} size={11}/>
-          {isSaved ? 'Saved' : 'Save'}
-        </button>
-        <Link
-          to={`/research?q=${encodeURIComponent(topic.title)}`}
-          style={{
-            padding: '8px 14px',
-            borderRadius: 999,
-            fontSize: 11,
-            fontFamily: 'var(--mono)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            background: 'var(--ink)',
-            color: 'var(--bg)',
-            border: '1px solid var(--ink)',
-            textDecoration: 'none',
-          }}
-        >
-          <Ic d={ICONS.ext} size={11}/>
-          Find Papers
-        </Link>
-      </div>
     </div>
   );
 };
 
+const SectionLabel = ({ children }) => (
+  <div style={{ fontSize: 11, fontWeight: 500, color: '#6B6F68', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>{children}</div>
+);
+
+const DividerText = ({ children }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0' }}>
+    <div style={{ flex: 1, height: '0.5px', background: '#DDD8CB' }} />
+    <div style={{ fontSize: 11, color: '#6B6F68' }}>{children}</div>
+    <div style={{ flex: 1, height: '0.5px', background: '#DDD8CB' }} />
+  </div>
+);
+
+const Segmented = ({ options, value, onChange }) => (
+  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    {options.map(option => {
+      const optionValue = Array.isArray(option) ? option[0] : option;
+      const label = Array.isArray(option) ? option[1] : option;
+      return (
+        <button key={optionValue} onClick={() => onChange(optionValue)} style={{ flex: 1, minWidth: 90, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--line)', background: value === optionValue ? 'var(--ink)' : 'var(--bg)', color: value === optionValue ? 'var(--bg)' : 'var(--ink)', cursor: 'pointer', fontWeight: 600 }}>
+          {label}
+        </button>
+      );
+    })}
+  </div>
+);
+
 // ═══ MAIN COMPONENT ═══
 export default function ThesisTopicFinder() {
+  const navigate = useNavigate();
   const [selectedField, setSelectedField] = useState(null);
   const [selectedCrop, setSelectedCrop] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -286,12 +299,18 @@ export default function ThesisTopicFinder() {
     catch { return []; }
   });
   const [view, setView] = useState('fields'); // fields | field-detail | saved | search | ai
+  const [openTopicId, setOpenTopicId] = useState(null);
 
   // AI states
+  const [aiStep, setAiStep] = useState(1);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiInput, setAiInput] = useState('');
+  const [customField, setCustomField] = useState('');
+  const [customMeth, setCustomMeth] = useState('');
+  const [aiState, setAiState] = useState('Punjab');
+  const [aiMeth, setAiMeth] = useState(0);
   const [aiLevel, setAiLevel] = useState('MSc');
   const [aiField, setAiField] = useState('');
+  const [aiPov, setAiPov] = useState('student');
   const [aiResults, setAiResults] = useState([]);
   const [aiError, setAiError] = useState('');
 
@@ -358,7 +377,10 @@ export default function ThesisTopicFinder() {
   const savedTopicsData = useMemo(() => {
     const all = getAllTopics();
     return savedTopics
-      .map(id => all.find(t => t.id === id))
+      .map(id => all.find(t => t.id === id) || (() => {
+        try { return JSON.parse(localStorage.getItem(`thesis_topic_${id}`) || 'null'); }
+        catch { return null; }
+      })())
       .filter(Boolean)
       .map(t => ({
         ...t,
@@ -376,6 +398,23 @@ export default function ThesisTopicFinder() {
     }
     setSavedTopics(updated);
     localStorage.setItem('thesis_saved_topics', JSON.stringify(updated));
+  };
+
+  const saveGeneratedTopic = (topic) => {
+    const id = topic.id || `v3_${Date.now()}_${topic.rank || 1}`;
+    const stored = { ...topic, id, fieldId: 'ai_generated', fieldName: customField || THESIS_FIELDS[aiField]?.name || aiField || 'Custom field' };
+    localStorage.setItem(`thesis_topic_${id}`, JSON.stringify(stored));
+    if (!savedTopics.includes(id)) {
+      const updated = [...savedTopics, id];
+      setSavedTopics(updated);
+      localStorage.setItem('thesis_saved_topics', JSON.stringify(updated));
+    }
+  };
+
+  const handleFindPapers = (query, topicTitle) => {
+    sessionStorage.setItem('khetlab_paper_query', query);
+    sessionStorage.setItem('khetlab_paper_topic', topicTitle);
+    navigate(`/research?q=${encodeURIComponent(query)}`);
   };
   
   const handleFieldSelect = (fieldId) => {
@@ -396,21 +435,35 @@ export default function ThesisTopicFinder() {
   };
 
   const handleAiGenerate = async () => {
-    if (!aiInput.trim() || !aiField) return;
+    const fieldName = customField.trim() || THESIS_FIELDS[aiField]?.name || '';
+    const methodList = METHS[aiField] || METHS.custom;
+    const methodName = customMeth.trim() || methodList[aiMeth] || '';
+    if (!fieldName || !methodName) return;
     setAiLoading(true);
     setAiError('');
     setAiResults([]);
     try {
-      const topics = await generateThesisTopics(aiField, aiInput.trim(), aiLevel);
+      const topics = await generateV3ThesisTopics({
+        field: fieldName,
+        customField: customField.trim(),
+        state: aiState,
+        methodology: methodName,
+        customMeth: customMeth.trim(),
+        level: aiLevel,
+        pov: aiPov,
+      });
       if (topics && topics.length > 0) {
-        setAiResults(topics.map((t, i) => ({
+        const mapped = topics.map((t, i) => ({
           ...t,
-          id: t.id || `ai_${Date.now()}_${i}`,
+          id: t.id || `v3_${Date.now()}_${i}`,
           fieldId: 'ai_generated',
-          fieldName: aiField,
-        })));
+          fieldName: fieldName,
+        }));
+        setAiResults(mapped);
+        setAiStep(3);
+        setOpenTopicId(mapped[0]?.id || null);
       } else {
-        setAiError('No topics generated. Please try a more specific interest.');
+        setAiError('No topics generated. Please try a more specific field or method.');
       }
     } catch (e) {
       setAiError('AI service error. Please try again.');
@@ -425,6 +478,9 @@ export default function ThesisTopicFinder() {
     });
     return stats;
   }, [currentTopics]);
+
+  const canProceedAi = Boolean(aiField || customField.trim());
+  const activeMethodList = METHS[aiField] || METHS.custom;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -643,6 +699,9 @@ export default function ThesisTopicFinder() {
                   topic={topic}
                   isSaved={savedTopics.includes(topic.id)}
                   onToggleSave={() => toggleSaveTopic(topic.id)}
+                  onFindPapers={handleFindPapers}
+                  isOpen={openTopicId === topic.id}
+                  onToggle={() => setOpenTopicId(openTopicId === topic.id ? null : topic.id)}
                 />
               ))}
             </div>
@@ -712,6 +771,9 @@ export default function ThesisTopicFinder() {
                     }}
                     isSaved={savedTopics.includes(topic.id)}
                     onToggleSave={() => toggleSaveTopic(topic.id)}
+                    onFindPapers={handleFindPapers}
+                    isOpen={openTopicId === topic.id}
+                    onToggle={() => setOpenTopicId(openTopicId === topic.id ? null : topic.id)}
                   />
                 ))}
               </div>
@@ -738,137 +800,95 @@ export default function ThesisTopicFinder() {
         {/* ═══ AI SUGGEST VIEW ═══ */}
         {view === 'ai' && (
           <div>
-            <div style={{ maxWidth: 700, margin: '0 auto' }}>
+            <div style={{ maxWidth: 980, margin: '0 auto' }}>
               <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>🤖</div>
                 <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>AI Thesis Topic Suggester</h2>
                 <p style={{ fontSize: 15, color: 'var(--muted)' }}>
-                  Tell the AI what you want to study. It will generate proper topic names, estimate paper counts, and identify research gaps.
+                  Choose a field, location, method and perspective. KhetLab returns complete thesis-ready topic cards.
                 </p>
               </div>
 
-              {/* Input Form */}
-              <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: 32, marginBottom: 32 }}>
-                {/* Field Selector */}
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 10 }}>
-                    SELECT FIELD
-                  </label>
-                  <select
-                    value={aiField}
-                    onChange={e => setAiField(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '14px 16px',
-                      fontSize: 16,
-                      background: 'var(--bg)',
-                      border: '1px solid var(--line)',
-                      borderRadius: 10,
-                      fontFamily: 'var(--display)',
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="">Choose a field...</option>
-                    {allFields.map(f => (
-                      <option key={f.id} value={f.name}>{f.icon} {f.name}</option>
-                    ))}
-                  </select>
-                </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 18, justifyContent: 'center', flexWrap: 'wrap' }}>
+                {[['1', 'Field'], ['2', 'Method'], ['3', 'Results']].map(([num, label]) => (
+                  <button key={num} onClick={() => setAiStep(Number(num))} style={{ padding: '8px 14px', borderRadius: 999, border: '1px solid var(--line)', background: aiStep === Number(num) ? 'var(--ink)' : 'var(--paper)', color: aiStep === Number(num) ? 'var(--bg)' : 'var(--ink)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer' }}>
+                    {num}. {label}
+                  </button>
+                ))}
+              </div>
 
-                {/* Level Selector */}
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 10 }}>
-                    STUDY LEVEL
-                  </label>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {['BSc', 'MSc', 'PhD'].map(lvl => (
-                      <button
-                        key={lvl}
-                        onClick={() => setAiLevel(lvl)}
-                        style={{
-                          flex: 1,
-                          padding: '12px',
-                          borderRadius: 10,
-                          fontSize: 16,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          background: aiLevel === lvl ? 'var(--ink)' : 'var(--bg)',
-                          color: aiLevel === lvl ? 'var(--bg)' : 'var(--ink)',
-                          border: `1px solid ${aiLevel === lvl ? 'var(--ink)' : 'var(--line)'}`,
-                        }}
-                      >
-                        {lvl}
+              {aiStep === 1 && (
+                <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, marginBottom: 32 }}>
+                  <SectionLabel>Select field</SectionLabel>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))', gap: 12 }}>
+                    {allFields.map(field => (
+                      <FieldCard
+                        key={field.id}
+                        field={field}
+                        selected={aiField === field.id && !customField}
+                        onClick={(id) => { setAiField(id); setCustomField(''); setAiMeth(0); }}
+                      />
+                    ))}
+                  </div>
+                  <DividerText>or type your own field below</DividerText>
+                  <input
+                    type="text"
+                    value={customField}
+                    onChange={e => { setCustomField(e.target.value); setAiField(e.target.value.trim() ? 'custom' : ''); setAiMeth(0); }}
+                    placeholder="e.g. Pomology, Mushroom cultivation, Precision agriculture, Sericulture, Apiculture..."
+                    style={{ width: '100%', padding: '10px 14px', fontSize: 14, borderRadius: 8, border: '0.5px solid #DDD8CB', background: '#FBF8F1', color: '#0F1410', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ fontSize: 11, color: '#6B6F68', marginTop: 6 }}>Type your field if it is not listed above. KhetLab will adapt topics accordingly.</div>
+                  <button disabled={!canProceedAi} onClick={() => setAiStep(2)} style={{ width: '100%', padding: 12, marginTop: 20, background: canProceedAi ? '#1A3D2E' : '#DDD8CB', color: '#F5F1E8', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: canProceedAi ? 'pointer' : 'not-allowed' }}>
+                    Continue to location →
+                  </button>
+                </div>
+              )}
+
+              {aiStep === 2 && (
+                <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, marginBottom: 32 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 16, marginBottom: 18 }}>
+                    <div>
+                      <SectionLabel>Location</SectionLabel>
+                      <select value={aiState} onChange={e => setAiState(e.target.value)} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--bg)', fontSize: 14 }}>
+                        {STATES.map(state => <option key={state} value={state}>{state}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <SectionLabel>Study level</SectionLabel>
+                      <Segmented options={['BSc', 'MSc', 'PhD']} value={aiLevel} onChange={setAiLevel} />
+                    </div>
+                    <div>
+                      <SectionLabel>Perspective</SectionLabel>
+                      <Segmented options={[['student', 'Student'], ['prof', 'Professor']]} value={aiPov} onChange={setAiPov} />
+                    </div>
+                  </div>
+
+                  <SectionLabel>Methodology</SectionLabel>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {activeMethodList.map((m, i) => (
+                      <button key={m} onClick={() => { setAiMeth(i); setCustomMeth(''); }} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, border: '0.5px solid', borderColor: aiMeth === i && !customMeth ? '#1A3D2E' : '#DDD8CB', background: aiMeth === i && !customMeth ? '#EAF3DE' : '#FBF8F1', color: aiMeth === i && !customMeth ? '#1A3D2E' : '#6B6F68', cursor: 'pointer', fontWeight: aiMeth === i && !customMeth ? 500 : 400 }}>
+                        {m}
                       </button>
                     ))}
                   </div>
-                </div>
-
-                {/* Interest Input */}
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 10 }}>
-                    YOUR INTEREST / SPECIFIC AREA
-                  </label>
+                  <DividerText>or describe your own method</DividerText>
                   <input
                     type="text"
-                    value={aiInput}
-                    onChange={e => setAiInput(e.target.value)}
-                    placeholder="e.g., high-density mango orchard management, organic pest control in tomato, precision irrigation in wheat..."
-                    style={{
-                      width: '100%',
-                      padding: '14px 16px',
-                      fontSize: 16,
-                      background: 'var(--bg)',
-                      border: '1px solid var(--line)',
-                      borderRadius: 10,
-                      fontFamily: 'var(--display)',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
+                    value={customMeth}
+                    onChange={e => { setCustomMeth(e.target.value); if (e.target.value.trim()) setAiMeth(null); }}
+                    placeholder="e.g. nano-fertilizer foliar spray, biochar-enriched compost, laser scarification..."
+                    style={{ width: '100%', padding: '10px 14px', fontSize: 14, borderRadius: 8, border: '0.5px solid #DDD8CB', background: '#FBF8F1', color: '#0F1410', outline: 'none', fontFamily: 'inherit', marginBottom: 6, boxSizing: 'border-box' }}
                   />
-                </div>
+                  <div style={{ fontSize: 11, color: '#6B6F68', marginBottom: 18 }}>Can not find your method? Type it and KhetLab will include it in topic suggestions.</div>
 
-                {/* Generate Button */}
-                <button
-                  onClick={handleAiGenerate}
-                  disabled={aiLoading || !aiField || !aiInput.trim()}
-                  style={{
-                    width: '100%',
-                    padding: '16px',
-                    fontSize: 15,
-                    fontWeight: 600,
-                    borderRadius: 12,
-                    cursor: aiLoading || !aiField || !aiInput.trim() ? 'not-allowed' : 'pointer',
-                    background: aiLoading || !aiField || !aiInput.trim() ? 'var(--bg-2)' : 'var(--ink)',
-                    color: aiLoading || !aiField || !aiInput.trim() ? 'var(--muted)' : 'var(--bg)',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                  }}
-                >
-                  {aiLoading ? (
-                    <>
-                      <span style={{
-                        width: 16,
-                        height: 16,
-                        border: '2px solid currentColor',
-                        borderTopColor: 'transparent',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
-                        display: 'inline-block',
-                      }}/>
-                      AI is generating topics...
-                    </>
-                  ) : (
-                    <>
-                      <Ic d={ICONS.sparkle} size={16}/>
-                      Generate Thesis Topics
-                    </>
-                  )}
-                </button>
-              </div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button onClick={() => setAiStep(1)} style={{ padding: '12px 18px', borderRadius: 10, background: 'transparent', border: '1px solid var(--line)', cursor: 'pointer' }}>Back</button>
+                    <button onClick={handleAiGenerate} disabled={aiLoading} style={{ flex: 1, minWidth: 220, padding: '12px 18px', borderRadius: 10, background: '#1A3D2E', color: '#F5F1E8', border: 'none', cursor: aiLoading ? 'wait' : 'pointer', fontWeight: 600 }}>
+                      {aiLoading ? 'Generating thesis topics...' : 'Generate full topic cards'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Error */}
               {aiError && (
@@ -878,7 +898,7 @@ export default function ThesisTopicFinder() {
               )}
 
               {/* Results */}
-              {aiResults.length > 0 && (
+              {aiStep === 3 && aiResults.length > 0 && (
                 <div>
                   <div style={{
                     display: 'flex',
@@ -892,7 +912,7 @@ export default function ThesisTopicFinder() {
                   }}>
                     <div>
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>AI GENERATED FOR</span>
-                      <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{aiField} · {aiLevel}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{customField || THESIS_FIELDS[aiField]?.name || aiField} · {aiState} · {aiLevel}</div>
                     </div>
                     <div style={{
                       padding: '8px 16px',
@@ -907,7 +927,7 @@ export default function ThesisTopicFinder() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
+                  <div>
                     {aiResults.map((topic, i) => (
                       <div key={topic.id}>
                         <div style={{
@@ -927,7 +947,10 @@ export default function ThesisTopicFinder() {
                         <TopicCard
                           topic={topic}
                           isSaved={savedTopics.includes(topic.id)}
-                          onToggleSave={() => toggleSaveTopic(topic.id)}
+                          onToggleSave={() => saveGeneratedTopic(topic)}
+                          onFindPapers={handleFindPapers}
+                          isOpen={openTopicId === topic.id}
+                          onToggle={() => setOpenTopicId(openTopicId === topic.id ? null : topic.id)}
                         />
                       </div>
                     ))}
@@ -955,6 +978,9 @@ export default function ThesisTopicFinder() {
                     topic={topic}
                     isSaved={true}
                     onToggleSave={() => toggleSaveTopic(topic.id)}
+                    onFindPapers={handleFindPapers}
+                    isOpen={openTopicId === topic.id}
+                    onToggle={() => setOpenTopicId(openTopicId === topic.id ? null : topic.id)}
                   />
                 ))}
               </div>

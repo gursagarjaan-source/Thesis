@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { multiSearch, getGoogleScholarURL, getReadingList, saveToReadingList, removeFromReadingList } from './scholarAPI';
 import { summarizePapers } from './geminiService';
 // PDFSummarizer removed for now — will add later
@@ -275,6 +275,7 @@ const AIResearchInsights = ({ query, results, onAnalyze }) => {
 };
 
 export default function ResearchFinder() {
+  const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -287,12 +288,14 @@ export default function ResearchFinder() {
   const [readingList, setReadingList] = useState(getReadingList());
   const [view, setView] = useState('search'); // search | saved
   const [sources, setSources] = useState(null);
+  const [fromTopic, setFromTopic] = useState('');
 
-  const doSearch = async (newOffset = 0) => {
-    if (!query.trim()) return;
+  const doSearch = async (newOffset = 0, queryOverride = query) => {
+    const activeQuery = queryOverride.trim();
+    if (!activeQuery) return;
     setLoading(true); setError('');
     try {
-      const data = await multiSearch(query, newOffset, 10, yearFilter, fieldFilter);
+      const data = await multiSearch(activeQuery, newOffset, 10, yearFilter, fieldFilter);
       setResults(data.data || []);
       setTotal(data.total || 0);
       setOffset(newOffset);
@@ -301,6 +304,21 @@ export default function ResearchFinder() {
       setError(err.message || 'Search failed. Please try again.');
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    const topic = sessionStorage.getItem('khetlab_paper_topic');
+
+    if (q) {
+      const decoded = decodeURIComponent(q);
+      setQuery(decoded);
+      setFromTopic(topic || decoded);
+      setView('search');
+      sessionStorage.removeItem('khetlab_paper_topic');
+      sessionStorage.removeItem('khetlab_paper_query');
+      doSearch(0, decoded);
+    }
+  }, []);
 
   const toggleSave = (paper) => {
     const saved = readingList.find(p => p.paperId === paper.paperId);
@@ -400,6 +418,12 @@ export default function ResearchFinder() {
             )}
 
             {error && <div style={{ padding: 16, background: 'rgba(180,80,40,0.08)', borderRadius: 10, color: 'var(--terra)', fontSize: 14, marginBottom: 20 }}>{error}</div>}
+
+            {fromTopic && (
+              <div style={{ background: '#EAF3DE', borderRadius: 8, padding: '9px 14px', marginBottom: 14, fontSize: 12, color: '#1A3D2E', border: '0.5px solid #2D7A45' }}>
+                Showing papers for: <strong>{fromTopic}</strong>
+              </div>
+            )}
 
             {/* Results */}
             {results.length > 0 && (
